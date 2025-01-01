@@ -21,7 +21,7 @@ This project involves the engineering and deployment of a robust Kubernetes clus
 3. **Service Management**: Enabled Kubernetes features like deployment scaling, replica management, and service networking.
 4. **Automation**: Implemented auto-healing and auto-scaling to enhance system reliability.
 
-![Architecture Diagram](link-to-architecture-diagram)
+https://www.pulumi.com/templates/kubernetes/azure/architecture.png
 
 ## Achievements 🏆
 - **📉 Downtime**: Reduced production environment downtime by 75%, significantly enhancing system reliability.
