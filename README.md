@@ -28,7 +28,7 @@ https://www.pulumi.com/templates/kubernetes/azure/architecture.png
 - **⚡ Performance**: Improved performance and scalability of React applications hosted in Pods.
 
 ## How to Use 🛠️
-1. Clone the repository: `git clone <repository-url>`
+1. Clone the repository: `https://github.com/Sahil0502/End-to-End-Kubernetes-Cloud-Infrastructure-with-Docker-and-Azure-Automation.git`
 2. Set up the Kubernetes cluster:
    - Install Minikube and Docker.
    - Initialize the Kubernetes cluster on Azure.
