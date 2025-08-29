@@ -1,0 +1,98 @@
+trigger:
+  branches:
+    include:
+    - main
+    - develop
+  paths:
+    include:
+    - src/*
+    - Dockerfile
+    - k8s/*
+    - package.json
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  containerRegistry: '$(ACR_NAME).azurecr.io'
+  imageRepository: 'k8s-azure-app'
+  dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
+  tag: '$(Build.BuildId)'
+  
+stages:
+- stage: Build
+  displayName: Build and Test
+  jobs:
+  - job: Test
+    displayName: Run Tests
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '18.x'
+      displayName: 'Install Node.js'
+    
+    - script: |
+        npm ci
+        npm run test --if-present
+        npm audit --audit-level moderate
+      displayName: 'npm install, test and audit'
+
+  - job: Build
+    displayName: Build Docker Image
+    dependsOn: Test
+    steps:
+    - task: Docker@2
+      displayName: Build and push image
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepository)
+        dockerfile: $(dockerfilePath)
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(tag)
+          latest
+
+- stage: Deploy
+  displayName: Deploy to AKS
+  dependsOn: Build
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: Deploy
+    displayName: Deploy to AKS
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: KubernetesManifest@0
+            displayName: Create ACR secret
+            inputs:
+              action: createSecret
+              secretType: dockerRegistry
+              secretName: acr-secret
+              dockerRegistryEndpoint: $(dockerRegistryServiceConnection)
+              kubernetesServiceConnection: $(kubernetesServiceConnection)
+              namespace: default
+
+          - task: replacetokens@3
+            displayName: Replace tokens in manifests
+            inputs:
+              targetFiles: 'k8s/*.yaml'
+              encoding: 'auto'
+              writeBOM: true
+              actionOnMissing: 'warn'
+              keepToken: false
+              tokenPrefix: '${'
+              tokenSuffix: '}'
+
+          - task: KubernetesManifest@0
+            displayName: Deploy to Kubernetes cluster
+            inputs:
+              action: deploy
+              kubernetesServiceConnection: $(kubernetesServiceConnection)
+              namespace: default
+              manifests: |
+                k8s/configmap.yaml
+                k8s/deployment.yaml
+                k8s/service.yaml
+                k8s/ingress.yaml
