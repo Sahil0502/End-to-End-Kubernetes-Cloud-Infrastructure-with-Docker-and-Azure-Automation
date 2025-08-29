@@ -71,11 +71,6 @@ resource "azurerm_kubernetes_cluster" "main" {
   azure_policy_enabled = true
 
   tags = var.tags
-
-  depends_on = [
-    azurerm_role_assignment.aks_acr,
-    azurerm_role_assignment.aks_network
-  ]
 }
 
 # Generate SSH key if not provided
