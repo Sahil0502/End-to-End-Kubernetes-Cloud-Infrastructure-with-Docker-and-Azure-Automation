@@ -63,7 +63,7 @@ jobs:
     
     - name: Upload Terraform Plan
       if: steps.check-secrets.outputs.has-terraform-secrets == 'true'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: terraform-plan
         path: ${{ env.TF_WORKING_DIR }}/tfplan

@@ -10,7 +10,7 @@ terraform {
       version = "~> 2.0"
     }
   }
-  
+
   # Optional: Configure remote backend for state management
   # backend "azurerm" {
   #   resource_group_name  = "tfstate-rg"

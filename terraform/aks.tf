@@ -100,8 +100,8 @@ resource "azurerm_kubernetes_cluster_node_pool" "additional" {
   vm_size               = "Standard_D2s_v3"
   node_count            = 1
   vnet_subnet_id        = azurerm_subnet.aks.id
-  
+
   node_taints = ["workload=additional:NoSchedule"]
-  
+
   tags = var.tags
 }
