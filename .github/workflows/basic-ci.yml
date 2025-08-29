@@ -83,21 +83,19 @@ jobs:
         terraform_version: '1.5.0'
     
     - name: Validate Terraform
+      working-directory: terraform
       run: |
-        cd terraform
-        
-        # Create test terraform.tfvars
-        cat > terraform.tfvars << EOF
+        # Create temporary terraform.tfvars for validation
+        cat > terraform.tfvars <<'EOF'
         project_name = "test-project"
-        location = "East US"
-        environment = "test"
+        location     = "East US"
+        environment  = "test"
         EOF
-        
-        # Initialize and validate
-        terraform init
+
+        # Initialize & validate
+        terraform init -input=false
         terraform validate
-        terraform fmt -check
-        
+        terraform fmt -check -recursive
         echo "✅ Terraform configuration is valid"
     
     - name: Security scan
