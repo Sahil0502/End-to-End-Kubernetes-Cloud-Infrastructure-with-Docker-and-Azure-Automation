@@ -30,3 +30,8 @@ describe('API Endpoints', () => {
     expect(response.body).toHaveProperty('nodeVersion');
   });
 });
+
+// Close server after tests
+afterAll((done) => {
+  done();
+});
