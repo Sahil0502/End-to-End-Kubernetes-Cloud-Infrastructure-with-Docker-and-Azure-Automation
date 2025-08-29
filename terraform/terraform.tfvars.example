@@ -1,0 +1,26 @@
+# terraform.tfvars.example
+# Copy this file to terraform.tfvars and customize the values
+
+project_name       = "k8s-azure-project"
+location          = "East US"
+environment       = "dev"
+node_count        = 2
+node_vm_size      = "Standard_D2s_v3"
+kubernetes_version = "1.27.3"
+enable_auto_scaling = true
+min_count         = 1
+max_count         = 5
+network_plugin    = "azure"
+enable_rbac       = true
+admin_username    = "azureuser"
+
+# Generate SSH key pair and put the public key here
+# ssh_public_key    = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ..."
+
+tags = {
+  Environment = "dev"
+  Project     = "k8s-azure-infrastructure"
+  ManagedBy   = "terraform"
+  Owner       = "your-name"
+  CostCenter  = "engineering"
+}
