@@ -157,12 +157,22 @@ jobs:
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: 'local-scan-image:latest'
+        format: 'table'
+        exit-code: '0'
+    
+    - name: Run Trivy vulnerability scanner (SARIF)
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'local-scan-image:latest'
         format: 'sarif'
         output: 'trivy-results.sarif'
         exit-code: '0'
     
-    - name: Upload Trivy scan results to GitHub Security
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: 'trivy-results.sarif'
+    - name: Show security scan results
+      run: |
+        echo "🔍 Security scan completed"
+        if [ -f "trivy-results.sarif" ]; then
+          echo "✅ SARIF report generated: trivy-results.sarif"
+          # Show summary of vulnerabilities found
+          grep -o '"level":"[^"]*"' trivy-results.sarif | sort | uniq -c || echo "No vulnerabilities pattern found"
+        fi
