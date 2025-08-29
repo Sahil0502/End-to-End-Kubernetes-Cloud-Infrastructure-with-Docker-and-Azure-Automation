@@ -19,9 +19,13 @@ This project demonstrates a complete DevOps pipeline for deploying containerized
 
 ```
 ├── 📄 Dockerfile                     # Container definition
-├── 📄 package.json                   # Node.js dependencies
-├── 📄 server.js                      # Sample application
-├── 📂 k8s/                          # Kubernetes manifests
+├── 📄 package.json                   # Node.js dependencies  
+├── 📄 package-lock.json               # Locked dependency versions
+├── 📄 server.js                      # Sample Express application
+├── 📄 server.test.js                 # Jest test suite
+├── � .dockerignore                  # Docker build exclusions
+├── 📄 .gitignore                     # Git exclusions
+├── �📂 k8s/                          # Kubernetes manifests
 │   ├── 📄 deployment.yaml           # Application deployment
 │   ├── 📄 service.yaml              # Service configuration
 │   ├── 📄 ingress.yaml              # Ingress controller
@@ -34,14 +38,17 @@ This project demonstrates a complete DevOps pipeline for deploying containerized
 │   ├── 📄 network.tf                # Network resources
 │   └── 📄 terraform.tfvars.example  # Example variables
 ├── 📂 .github/workflows/            # GitHub Actions
-│   ├── 📄 ci-cd.yml                 # Application pipeline
+│   ├── 📄 basic-ci.yml              # Basic validation (no secrets)
+│   ├── 📄 ci-cd.yml                 # Full application pipeline
 │   └── 📄 infrastructure.yml        # Infrastructure pipeline
 ├── 📂 azure-pipelines/              # Azure DevOps Pipelines
 │   └── 📄 azure-pipelines.yml       # Alternative CI/CD
-└── 📂 scripts/                      # Deployment scripts
-    ├── 📄 deploy.sh                 # Linux/Mac deployment
-    ├── 📄 deploy.bat                # Windows deployment
-    └── 📄 cleanup.sh                # Resource cleanup
+├── 📂 scripts/                      # Deployment scripts
+│   ├── 📄 deploy.sh                 # Linux/Mac deployment
+│   ├── 📄 deploy.bat                # Windows deployment
+│   └── 📄 cleanup.sh                # Resource cleanup
+├── 📄 GITHUB_SECRETS_SETUP.md       # Detailed secrets setup guide
+└── 📄 README.md                     # This comprehensive guide
 ```
 
 ## 🚀 Quick Start
@@ -65,22 +72,34 @@ cd "End-to-End Kubernetes Cloud Infrastructure with Docker and Azure Automation"
 
 ### 2. Initial Testing (No Azure Required)
 
-Test the project locally first:
+Test the project locally first using the Basic CI validation:
 
 ```bash
 # Install dependencies
 npm install
 
-# Run tests
+# Run tests (Jest test suite)
 npm test
 
 # Build and test Docker container
 docker build -t k8s-azure-app .
-docker run -p 3000:3000 k8s-azure-app
+docker run -d -p 3000:3000 --name test-container k8s-azure-app
 
-# Access application
+# Test application endpoints
 curl http://localhost:3000
 curl http://localhost:3000/health
+curl http://localhost:3000/api/info
+
+# Cleanup test container
+docker stop test-container
+docker rm test-container
+
+# Validate Kubernetes manifests (requires kubectl)
+kubectl --dry-run=client apply -f k8s/ --validate=false
+
+# Check Basic CI workflow status
+# → Visit your GitHub repository's Actions tab
+# → "Basic CI" workflow should be ✅ passing
 ```
 
 ### 3. Configure GitHub Secrets
@@ -150,35 +169,65 @@ kubectl apply -f .
 
 ## 🔧 GitHub Actions Workflows
 
-This project includes multiple GitHub Actions workflows:
+This project includes **three** GitHub Actions workflows for comprehensive testing and deployment:
 
-### 1. Basic CI Workflow
+### 1. Basic CI Workflow (`basic-ci.yml`)
 - ✅ **Always runs** - No secrets required
-- Tests Node.js application
-- Validates Docker build
-- Checks Kubernetes manifests
-- Validates Terraform configuration
+- Tests Node.js application with Jest
+- Validates Docker build and container functionality  
+- Checks Kubernetes manifests syntax and structure
+- Validates Terraform configuration (init, validate, fmt)
+- Runs basic security scans
+- **Purpose**: Immediate feedback on code quality without Azure dependencies
 
-### 2. Full CI/CD Pipeline
+### 2. Full CI/CD Pipeline (`ci-cd.yml`)
 - 🔐 **Requires secrets** - See [GitHub Secrets Setup Guide](./GITHUB_SECRETS_SETUP.md)
-- Builds and pushes to Azure Container Registry
-- Deploys to Azure Kubernetes Service
-- Runs security scans
+- Builds and pushes to Azure Container Registry (ACR)
+- Deploys to Azure Kubernetes Service (AKS)
+- Runs comprehensive security scans with Trivy
+- Updates Kubernetes deployments with new images
 
-### 3. Infrastructure Pipeline
-- 🔐 **Requires secrets** - Terraform Azure credentials
-- Validates and deploys infrastructure
-- Manages Terraform state
+### 3. Infrastructure Pipeline (`infrastructure.yml`)
+- 🔐 **Requires secrets** - Terraform Azure credentials (ARM_*)
+- Validates and deploys infrastructure with Terraform
+- Manages Terraform state and plans
+- Creates AKS cluster, ACR, networking, and monitoring resources
 
 ### Current Workflow Status
 
-If you're seeing failing workflows, this is expected until you configure the required secrets:
+🎯 **What to expect:**
 
-- ❌ **CI/CD Pipeline** → Configure ACR and AKS secrets
-- ❌ **Infrastructure Deployment** → Configure ARM (Azure) secrets  
-- ✅ **Basic CI** → Should pass without any configuration
+- ✅ **Basic CI** → Should pass immediately (validates code structure)
+- ⚠️ **CI/CD Pipeline** → Will show warnings until ACR/AKS secrets configured
+- ⚠️ **Infrastructure Deployment** → Will show warnings until ARM secrets configured
 
-## 🔧 Configuration
+> **Note**: Failing workflows are expected until you configure the required Azure secrets. The Basic CI workflow provides immediate validation without any Azure dependencies.
+
+## 🆕 Recent Updates & Fixes
+
+### ✅ Latest Improvements (v2.0)
+
+**GitHub Actions Enhancements:**
+- ✅ Added **Basic CI workflow** for immediate validation without Azure dependencies
+- ✅ Fixed deprecated GitHub Actions (upload/download-artifact v3 → v4)
+- ✅ Resolved Terraform circular dependency issues in AKS role assignments
+- ✅ Fixed Terraform formatting validation (fmt -check) with proper heredoc handling
+- ✅ Enhanced Kubernetes manifest validation with kubectl + yq
+- ✅ Added comprehensive container testing with health checks
+
+**Infrastructure Improvements:**
+- ✅ Removed problematic `depends_on` clauses causing Terraform cycles
+- ✅ Improved Terraform file formatting and validation
+- ✅ Enhanced error handling in deployment scripts
+- ✅ Added proper working-directory usage in GitHub Actions
+
+**Application Features:**
+- ✅ Enhanced health check endpoints (`/health`, `/api/info`)
+- ✅ Improved Docker multi-stage builds with security contexts
+- ✅ Added comprehensive Jest testing suite
+- ✅ Enhanced error handling and logging
+
+### 🔧 Configuration
 
 ### Terraform Variables
 
@@ -198,13 +247,25 @@ Key variables you can customize in `terraform/terraform.tfvars`:
 
 For CI/CD pipelines, configure these secrets:
 
-#### GitHub Secrets
-- `AZURE_CREDENTIALS` - Azure service principal
+### GitHub Secrets
+
+Configure these secrets in your GitHub repository (Settings → Secrets and variables → Actions):
+
+#### For Infrastructure Pipeline (ARM - Azure Resource Manager)
+- `ARM_CLIENT_ID` - Service principal application ID
+- `ARM_CLIENT_SECRET` - Service principal secret  
+- `ARM_SUBSCRIPTION_ID` - Azure subscription ID
+- `ARM_TENANT_ID` - Azure AD tenant ID
+
+#### For CI/CD Pipeline (ACR & AKS)
+- `AZURE_CREDENTIALS` - Azure service principal JSON
 - `ACR_NAME` - Container registry name
-- `ACR_USERNAME` - Registry username
+- `ACR_USERNAME` - Registry username  
 - `ACR_PASSWORD` - Registry password
 - `RESOURCE_GROUP` - Resource group name
 - `CLUSTER_NAME` - AKS cluster name
+
+> 📋 **See detailed setup guide**: [GITHUB_SECRETS_SETUP.md](./GITHUB_SECRETS_SETUP.md)
 
 #### Azure Pipeline Variables
 - `dockerRegistryServiceConnection`
@@ -216,20 +277,48 @@ For CI/CD pipelines, configure these secrets:
 
 ## 🔄 CI/CD Pipeline
 
-### GitHub Actions
+### GitHub Actions Workflows
 
-This project includes two GitHub Actions workflows:
+This project includes **three comprehensive workflows**:
 
-1. **Application Pipeline** (`.github/workflows/ci-cd.yml`)
-   - Lint and test code
-   - Build and push Docker images
-   - Deploy to AKS
-   - Security scanning with Trivy
+#### 1. **Basic CI Pipeline** (`.github/workflows/basic-ci.yml`)
+**Runs on every push/PR - No secrets required**
+- ✅ Node.js testing with Jest
+- ✅ Docker build and container testing
+- ✅ Kubernetes manifest validation (kubectl + yq)
+- ✅ Terraform configuration validation (init, validate, fmt)
+- ✅ Basic security scanning
+- ✅ Project setup verification
 
-2. **Infrastructure Pipeline** (`.github/workflows/infrastructure.yml`)
-   - Terraform plan and apply
-   - Infrastructure validation
-   - State management
+#### 2. **Application CI/CD Pipeline** (`.github/workflows/ci-cd.yml`)
+**Requires Azure secrets for full deployment**
+- 🔐 Builds and pushes Docker images to ACR
+- 🔐 Deploys applications to AKS
+- 🔐 Security scanning with Trivy
+- 🔐 Rolling updates and health checks
+
+#### 3. **Infrastructure Pipeline** (`.github/workflows/infrastructure.yml`)
+**Requires Terraform Azure credentials**
+- 🔐 Terraform plan and apply for infrastructure
+- 🔐 Creates AKS cluster, ACR, networking
+- 🔐 Infrastructure validation and state management
+
+### Workflow Triggers
+
+```yaml
+# Basic CI - Always runs
+on: [push, pull_request]
+
+# CI/CD Pipeline - Runs on main branch
+on:
+  push:
+    branches: [main]
+  
+# Infrastructure - Runs on terraform changes
+on:
+  push:
+    paths: ['terraform/**']
+```
 
 ### Azure Pipelines
 
