@@ -63,7 +63,33 @@ git clone <your-repo-url>
 cd "End-to-End Kubernetes Cloud Infrastructure with Docker and Azure Automation"
 ```
 
-### 2. Configure Azure Authentication
+### 2. Initial Testing (No Azure Required)
+
+Test the project locally first:
+
+```bash
+# Install dependencies
+npm install
+
+# Run tests
+npm test
+
+# Build and test Docker container
+docker build -t k8s-azure-app .
+docker run -p 3000:3000 k8s-azure-app
+
+# Access application
+curl http://localhost:3000
+curl http://localhost:3000/health
+```
+
+### 3. Configure GitHub Secrets
+
+⚠️ **Important**: Before deploying to Azure, you need to configure GitHub secrets.
+
+📋 **Follow the detailed guide**: [GitHub Secrets Setup Guide](./GITHUB_SECRETS_SETUP.md)
+
+### 4. Configure Azure Authentication
 
 ```bash
 # Login to Azure
@@ -72,11 +98,11 @@ az login
 # Set your subscription (if you have multiple)
 az account set --subscription "your-subscription-id"
 
-# Create a service principal for Terraform (optional)
-az ad sp create-for-rbac --name "terraform-sp" --role="Contributor" --scopes="/subscriptions/your-subscription-id"
+# Create a service principal for Terraform (copy the output to GitHub secrets)
+az ad sp create-for-rbac --name "terraform-sp" --role="Contributor" --scopes="/subscriptions/your-subscription-id" --sdk-auth
 ```
 
-### 3. Configure Terraform Variables
+### 5. Configure Terraform Variables
 
 ```bash
 cd terraform
@@ -84,7 +110,7 @@ cp terraform.tfvars.example terraform.tfvars
 # Edit terraform.tfvars with your specific values
 ```
 
-### 4. Deploy Infrastructure and Application
+### 6. Deploy Infrastructure and Application
 
 #### Option A: Using Deployment Script (Recommended)
 
@@ -121,6 +147,36 @@ docker push $ACR_NAME.azurecr.io/k8s-azure-app:latest
 cd ../k8s
 kubectl apply -f .
 ```
+
+## 🔧 GitHub Actions Workflows
+
+This project includes multiple GitHub Actions workflows:
+
+### 1. Basic CI Workflow
+- ✅ **Always runs** - No secrets required
+- Tests Node.js application
+- Validates Docker build
+- Checks Kubernetes manifests
+- Validates Terraform configuration
+
+### 2. Full CI/CD Pipeline
+- 🔐 **Requires secrets** - See [GitHub Secrets Setup Guide](./GITHUB_SECRETS_SETUP.md)
+- Builds and pushes to Azure Container Registry
+- Deploys to Azure Kubernetes Service
+- Runs security scans
+
+### 3. Infrastructure Pipeline
+- 🔐 **Requires secrets** - Terraform Azure credentials
+- Validates and deploys infrastructure
+- Manages Terraform state
+
+### Current Workflow Status
+
+If you're seeing failing workflows, this is expected until you configure the required secrets:
+
+- ❌ **CI/CD Pipeline** → Configure ACR and AKS secrets
+- ❌ **Infrastructure Deployment** → Configure ARM (Azure) secrets  
+- ✅ **Basic CI** → Should pass without any configuration
 
 ## 🔧 Configuration
 

@@ -25,20 +25,33 @@ jobs:
       with:
         terraform_version: ${{ env.TF_VERSION }}
     
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - name: Check for Terraform secrets
+      id: check-secrets
+      run: |
+        if [ -n "${{ secrets.ARM_CLIENT_ID }}" ] && [ -n "${{ secrets.ARM_CLIENT_SECRET }}" ] && [ -n "${{ secrets.ARM_SUBSCRIPTION_ID }}" ] && [ -n "${{ secrets.ARM_TENANT_ID }}" ]; then
+          echo "has-terraform-secrets=true" >> $GITHUB_OUTPUT
+        else
+          echo "has-terraform-secrets=false" >> $GITHUB_OUTPUT
+          echo "::warning::Terraform secrets not configured. Please set ARM_CLIENT_ID, ARM_CLIENT_SECRET, ARM_SUBSCRIPTION_ID, and ARM_TENANT_ID."
+        fi
     
     - name: Terraform Init
       working-directory: ${{ env.TF_WORKING_DIR }}
-      run: terraform init
+      run: |
+        # Create a minimal terraform.tfvars for validation
+        cat > terraform.tfvars << EOF
+        project_name = "k8s-azure-project"
+        location = "East US"
+        environment = "dev"
+        EOF
+        terraform init
     
     - name: Terraform Validate
       working-directory: ${{ env.TF_WORKING_DIR }}
       run: terraform validate
     
     - name: Terraform Plan
+      if: steps.check-secrets.outputs.has-terraform-secrets == 'true'
       working-directory: ${{ env.TF_WORKING_DIR }}
       run: |
         terraform plan -no-color -out=tfplan
@@ -49,6 +62,7 @@ jobs:
         ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
     
     - name: Upload Terraform Plan
+      if: steps.check-secrets.outputs.has-terraform-secrets == 'true'
       uses: actions/upload-artifact@v3
       with:
         name: terraform-plan
@@ -63,27 +77,36 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Check for Terraform secrets
+      id: check-secrets
+      run: |
+        if [ -n "${{ secrets.ARM_CLIENT_ID }}" ] && [ -n "${{ secrets.ARM_CLIENT_SECRET }}" ] && [ -n "${{ secrets.ARM_SUBSCRIPTION_ID }}" ] && [ -n "${{ secrets.ARM_TENANT_ID }}" ]; then
+          echo "has-terraform-secrets=true" >> $GITHUB_OUTPUT
+        else
+          echo "has-terraform-secrets=false" >> $GITHUB_OUTPUT
+          echo "::warning::Terraform secrets not configured. Skipping apply."
+        fi
+    
     - name: Setup Terraform
+      if: steps.check-secrets.outputs.has-terraform-secrets == 'true'
       uses: hashicorp/setup-terraform@v2
       with:
         terraform_version: ${{ env.TF_VERSION }}
     
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-    
     - name: Download Terraform Plan
+      if: steps.check-secrets.outputs.has-terraform-secrets == 'true'
       uses: actions/download-artifact@v3
       with:
         name: terraform-plan
         path: ${{ env.TF_WORKING_DIR }}
     
     - name: Terraform Init
+      if: steps.check-secrets.outputs.has-terraform-secrets == 'true'
       working-directory: ${{ env.TF_WORKING_DIR }}
       run: terraform init
     
     - name: Terraform Apply
+      if: steps.check-secrets.outputs.has-terraform-secrets == 'true'
       working-directory: ${{ env.TF_WORKING_DIR }}
       run: terraform apply tfplan
       env:
@@ -93,6 +116,7 @@ jobs:
         ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
     
     - name: Output Infrastructure Details
+      if: steps.check-secrets.outputs.has-terraform-secrets == 'true'
       working-directory: ${{ env.TF_WORKING_DIR }}
       run: |
         echo "## Infrastructure Deployment Complete" >> $GITHUB_STEP_SUMMARY
